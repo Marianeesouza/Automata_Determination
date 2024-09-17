@@ -77,7 +77,7 @@ class ndfa:
         fa = cls()
         with open(filename) as f:
             lines = f.readlines()
-            fa.start = lines.pop(0).strip()
+            fa.start = set(lines.pop(0).strip().split(","))
             fa.finals = set(lines.pop(0).strip().split(","))
             for line in lines:
                 state, symbol, next_state = line.strip().split(",")
@@ -139,19 +139,30 @@ class ndfa:
         else:
             print("Reject")
 
-   
-
-
-
-    def determinize(self):
+    def determinize(self) -> dfa:
+        d = dfa()
+        d.states = self.state_subset()
+        d.alphabet = self.alphabet
+        # Atribui o estado inicial do dfa como o conjunto de estados iniciais do ndfa
+        if len(self.start) == 1:
+            d.start = self.start
+        else:
+            for state in d.states:
+                if set(self.start) == set(state):
+                    d.start = state
+                    break
+        # Atribui os estados finais do dfa como os conjuntos que 
+        # contém pelo menos um estado final do ndfa
+        for state in d.states:
+            if any (s in self.finals for s in state):
+                d.finals.add(state)
         pass
         
-
-
 
 if __name__ == "__main__":
     fa = ndfa.fromfile("nfd.auto")
     print(fa.state_subset())
+    fa.determinize()
     input = "010000100"
-    print(fa.run(input))
+    
     
