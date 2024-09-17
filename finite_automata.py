@@ -1,3 +1,5 @@
+from itertools import combinations
+
 class dfa:
     def __init__(self) -> None:
         self.states = set()
@@ -45,6 +47,7 @@ class dfa:
                f"transitions: {self.transitions}\n" + \
                f"start: {self.start}\n" + \
                f"finals: {self.finals}\n"
+
 
     def run(self, input) -> None:
         print(f"Running input: {input}")
@@ -96,7 +99,20 @@ class ndfa:
             fa.states.add(state)
             fa.states.add(next_state)
             fa.alphabet.add(symbol)
-            
+
+    def state_subset(self) -> set:
+        s = list(self.states)
+        all_subsets = set()
+        states = [set(combinations(s, r)) for r in range(len(s)+1)]
+        for state in states:
+            for i in state:
+                if len(i) == 1:
+                    all_subsets.add(i[0])
+                else:
+                    all_subsets.add(i)
+        return all_subsets
+                
+
 
     def __str__(self):
         return f"states: {self.states}\n" + \
@@ -122,13 +138,20 @@ class ndfa:
             print("Accept")
         else:
             print("Reject")
-                
+
+   
+
+
+
+    def determinize(self):
+        pass
+        
 
 
 
 if __name__ == "__main__":
     fa = ndfa.fromfile("nfd.auto")
-    print(fa.transitions)
+    print(fa.state_subset())
     input = "010000100"
     print(fa.run(input))
     
