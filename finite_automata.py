@@ -44,21 +44,32 @@ class dfa:
     def __str__(self):
         return f"states: {self.states}\n" + \
                f"alphabet: {self.alphabet}\n" + \
-               f"transitions: {self.transitions}\n" + \
+               f"transitions: {self.print_transition_dfa()}\n" + \
                f"start: {self.start}\n" + \
                f"finals: {self.finals}\n"
 
-
+    def print_transition_dfa(self):
+        return "\n".join(f"{key[0]} --{key[1]}--> {value}" for key, value in self.transitions.items())
+                                                          
     def run(self, input) -> None:
         print(f"Running input: {input}")
         current_state = self.start
         for symbol in input:
+            current_state = tuple(sorted(current_state))
             print(f"{current_state} --{symbol}--> {self.transitions.get((current_state, symbol), self.blank)}")
             current_state = self.transitions.get((current_state, symbol), self.blank)
-        if current_state in self.finals:
+        for s in self.finals:
+            accept = False
+            x = set(s)
+            y = set(current_state)
+            if x == y:
+                accept = True
+                break
+        if accept:
             print("Accept")
         else:
             print("Reject")
+                
 
 class ndfa:
     def __init__(self) -> None:
@@ -107,8 +118,13 @@ class ndfa:
         for state in states:
             for i in state:
                 if len(i) == 1:
-                    all_subsets.add(i[0])
+                    x = set()
+                    x.add(i[0])
+                    x = tuple(x)
+                    all_subsets.add(x)
                 else:
+                    i = sorted(i)
+                    i = tuple(i)
                     all_subsets.add(i)
         return all_subsets
                 
@@ -117,14 +133,19 @@ class ndfa:
     def __str__(self):
         return f"states: {self.states}\n" + \
                f"alphabet: {self.alphabet}\n" + \
-               f"transitions: {self.transitions}\n" + \
+               f"transitions: {self.print_transition()}\n" + \
                f"start: {self.start}\n" + \
                f"finals: {self.finals}\n"
 
+    def print_transition(self):
+        transitions = ""
+        for transition in self.transitions:
+            transitions += (f"{transition[0]} --{transition[1]}--> {transition[2]}")
+        return transitions
     
     def run(self, input) -> None:
         print(f"Running input: {input}")
-        current_states =[s for s in self.start.split(",")]
+        current_states = [s for s in self.start]
         for symbol in input:
             next_states = set()
             for state in current_states:
@@ -142,27 +163,58 @@ class ndfa:
     def determinize(self) -> dfa:
         d = dfa()
         d.states = self.state_subset()
-        d.alphabet = self.alphabet
+        d.alphabet = set([symbol for symbol in self.alphabet if symbol != " "])
         # Atribui o estado inicial do dfa como o conjunto de estados iniciais do ndfa
+        st = set()  # Usa set() para garantir que não haja elementos repetidos
         if len(self.start) == 1:
-            d.start = self.start
+            st.add(next(iter(self.start)))  # Pega o único estado inicial
         else:
             for state in d.states:
                 if set(self.start) == set(state):
-                    d.start = state
-                    break
+                    for s in state:
+                        st.add(s)  # Adiciona ao conjunto sem duplicatas
+                break
+
+        for transition in self.transitions:
+            if transition[0] in self.start and transition[1] == " ":
+                st.add(transition[2])  # Adiciona o próximo estado ao conjunto
+
+        # Agora converte o conjunto em tupla, para ser usado como chave ou estado inicial
+        d.start = tuple(sorted(tuple(st)))
+        
         # Atribui os estados finais do dfa como os conjuntos que 
         # contém pelo menos um estado final do ndfa
         for state in d.states:
-            if any (s in self.finals for s in state):
+            if (any (s in self.finals for s in state)):
                 d.finals.add(state)
-        pass
+        #transições dfa
+        for state in d.states:
+            for symbol in d.alphabet:
+                next_state = set()
+                for s in state if isinstance(state, tuple) else (state,):
+                    for transition in self.transitions:
+                        if transition[0] == s and transition[1] == symbol:
+                            next_state.add(transition[2])
+                if next_state:
+                    if len(next_state) > 1:
+                        next_state = tuple(next_state)
+                    else:
+                        ns = next_state.pop()
+                        next_state = (ns,)
+                    d.transitions[(state, symbol)] = next_state
+                    print(f"{state} --{symbol}--> {next_state}")
+                else:
+                    d.transitions[(state, symbol)] = self.blank
+                    print(f"{state} --{symbol}--> {self.blank}")
         
+            
+        return d
 
 if __name__ == "__main__":
     fa = ndfa.fromfile("nfd.auto")
     print(fa.state_subset())
-    fa.determinize()
-    input = "010000100"
+    d = fa.determinize()
+    input = "baa"
+    d.run(input)
     
     
